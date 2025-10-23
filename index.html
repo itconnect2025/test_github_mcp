@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>타이핑 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f7f7f7;
+            border-radius: 10px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .target-text {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            line-height: 1.6;
+            min-height: 80px;
+            text-align: center;
+            color: #333;
+        }
+
+        .input-area {
+            margin-bottom: 20px;
+        }
+
+        #user-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #user-input:focus {
+            border-color: #667eea;
+        }
+
+        #user-input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-start {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-start:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result h2 {
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+
+        .time-warning {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⌨️ 타이핑 게임</h1>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">남은 시간</div>
+                <div class="stat-value" id="timer">30</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">정확도</div>
+                <div class="stat-value" id="accuracy">0%</div>
+            </div>
+        </div>
+
+        <div class="target-text" id="target-text">
+            시작 버튼을 눌러주세요!
+        </div>
+
+        <div class="input-area">
+            <input
+                type="text"
+                id="user-input"
+                placeholder="여기에 입력하세요..."
+                disabled
+            />
+        </div>
+
+        <div class="buttons">
+            <button class="btn-start" id="start-btn">시작</button>
+        </div>
+
+        <div class="result" id="result">
+            <h2>게임 종료!</h2>
+            <p id="result-text"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GameTimer, InputValidator, AccuracyCalculator } from './typingGame.js';
+
+        const targetTexts = [
+            'The quick brown fox jumps over the lazy dog',
+            'JavaScript is a versatile programming language',
+            'Practice makes perfect in typing',
+            'Hello World from the typing game',
+            'Speed and accuracy are both important'
+        ];
+
+        let currentGame = null;
+        let timerInterval = null;
+        let currentTarget = '';
+        let correctChars = 0;
+        let totalChars = 0;
+
+        const elements = {
+            timer: document.getElementById('timer'),
+            accuracy: document.getElementById('accuracy'),
+            targetText: document.getElementById('target-text'),
+            userInput: document.getElementById('user-input'),
+            startBtn: document.getElementById('start-btn'),
+            result: document.getElementById('result'),
+            resultText: document.getElementById('result-text')
+        };
+
+        function getRandomText() {
+            return targetTexts[Math.floor(Math.random() * targetTexts.length)];
+        }
+
+        function startGame() {
+            currentTarget = getRandomText();
+            elements.targetText.textContent = currentTarget;
+            elements.userInput.value = '';
+            elements.userInput.disabled = false;
+            elements.userInput.focus();
+            elements.startBtn.disabled = true;
+            elements.result.classList.remove('show');
+
+            correctChars = 0;
+            totalChars = 0;
+
+            const timer = new GameTimer();
+            const calculator = new AccuracyCalculator();
+
+            updateTimer(timer.getTime());
+            updateAccuracy(0);
+
+            timerInterval = setInterval(() => {
+                timer.tick();
+                const timeLeft = timer.getTime();
+                updateTimer(timeLeft);
+
+                if (timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        function endGame(completed) {
+            clearInterval(timerInterval);
+            elements.userInput.disabled = true;
+            elements.startBtn.disabled = false;
+            elements.result.classList.add('show');
+
+            if (completed) {
+                elements.resultText.textContent = `완벽합니다! 정확도: ${elements.accuracy.textContent}`;
+            } else {
+                elements.resultText.textContent = `시간 종료! 정확도: ${elements.accuracy.textContent}`;
+            }
+        }
+
+        function updateTimer(time) {
+            elements.timer.textContent = time;
+            if (time <= 10) {
+                elements.timer.classList.add('time-warning');
+            } else {
+                elements.timer.classList.remove('time-warning');
+            }
+        }
+
+        function updateAccuracy(accuracy) {
+            elements.accuracy.textContent = Math.round(accuracy) + '%';
+        }
+
+        function checkInput() {
+            const input = elements.userInput.value;
+            totalChars = input.length;
+            correctChars = 0;
+
+            for (let i = 0; i < input.length; i++) {
+                if (input[i] === currentTarget[i]) {
+                    correctChars++;
+                }
+            }
+
+            const calculator = new AccuracyCalculator();
+            const accuracy = totalChars > 0 ? calculator.calculate(correctChars, totalChars) : 0;
+            updateAccuracy(accuracy);
+
+            if (input === currentTarget) {
+                endGame(true);
+            }
+        }
+
+        elements.startBtn.addEventListener('click', startGame);
+        elements.userInput.addEventListener('input', checkInput);
+    </script>
+</body>
+</html>
