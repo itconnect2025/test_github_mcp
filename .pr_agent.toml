@@ -1,0 +1,11 @@
+[config]
+language = "ko"
+
+[pr_reviewer]
+language = "korean"
+
+[pr_description]
+language = "korean"
+
+[pr_code_suggestions]
+language = "korean"
